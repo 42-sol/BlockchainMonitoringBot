@@ -1,6 +1,7 @@
 package blockchainconnector
 
 import (
+	"42sol/BlockchainMonitoringBot/config"
 	databaseconnector "42sol/BlockchainMonitoringBot/database_connector"
 	"context"
 	"encoding/json"
@@ -90,6 +91,7 @@ func GetHealth(nodeURL string, nodeName string) (string, error) {
 	response, err := http.Get(nodeURL)
 
 	if err != nil {
+		log.Println(err)
 		return "", errors.New("API бэкенда недоступно или бэкенд не запущен")
 	}
 
@@ -97,14 +99,14 @@ func GetHealth(nodeURL string, nodeName string) (string, error) {
 	body, err := io.ReadAll(response.Body)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Println(err)
 		return "", errors.New("Не удаётся прочитать ответ API")
 	}
 
 	err = json.Unmarshal(body, &healthData)
 
 	if err != nil {
-		log.Println(err.Error())
+		log.Println(err)
 		return "", errors.New("Не удаётся прочитать ответ API")
 	}
 
@@ -219,8 +221,8 @@ func RunBackgroundHealthCheck(ctx context.Context, botObject *bot.Bot) {
 		response, err := http.Get(nodesToCheckUrl)
 
 		if err != nil {
-			// API админского узла недоступно
-			fmt.Println(err)
+			// Admin node API cant be reached
+			log.Println(err)
 			return
 		}
 
@@ -252,9 +254,11 @@ func sendReportToSubs(ctx context.Context, botObject *bot.Bot, nodesList []Targe
 	db.Model(databaseconnector.User{}).Where("chat_id != ?", nil).Pluck("chat_id", &chatIDs)
 
 	for _, node := range nodesList {
-		if node.IsReportedToday {
-			continue
-		}
+
+		// do not report if report was already sent today
+		//if node.IsReportedToday {
+		//	continue
+		//}
 
 		touchOrCreateNode(node)
 		healthReport, err := GetHealth(node.URI, node.Key)
@@ -281,14 +285,15 @@ func touchOrCreateNode(node TargetNodeDesc) {
 	db.Model(databaseconnector.Node{}).Where("key = ? AND uri = ?", node.Key, node.URI).Count(&matchFound)
 
 	if matchFound > 0 {
-		db.Model(databaseconnector.Node{}).Where("key = ? AND uri = ?", node.Key, node.URI).Update("is_reported_today", true)
+		//db.Model(databaseconnector.Node{}).Where("key = ? AND uri = ?", node.Key, node.URI).Update("is_reported_today", true)
+		db.Model(databaseconnector.Node{}).Where("key = ? AND uri = ?", node.Key, node.URI).Update("updated_at", time.Now())
 	} else {
-		db.Model(databaseconnector.Node{}).Create(databaseconnector.Node{Key: node.Key, Uri: node.URI, IsReportedToday: true})
+		db.Model(databaseconnector.Node{}).Create(databaseconnector.Node{Key: node.Key, Uri: node.URI}) // IsReportedToday: true
 	}
 }
 
 func ScheduleHealthCheck(ctx context.Context, botObject *bot.Bot) {
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(time.Duration(config.AppConfig.ScanInterval) * time.Minute)
 	defer ticker.Stop()
 
 	for {
