@@ -6,30 +6,29 @@ import (
 	databaseConnector "42sol/BlockchainMonitoringBot/database_connector"
 	telegramConnector "42sol/BlockchainMonitoringBot/telegram_connector"
 	"log"
-	"os"
 
 	"github.com/joho/godotenv"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func main() {
-	// redirect logging to file ----------------
-	f, err := os.OpenFile("log.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-
-	if err != nil {
-		log.Fatalf("error opening file: %v", err)
-	}
-	defer f.Close()
-
-	log.SetOutput(f)
-	// ----------------
-
 	// load env and config ----------------
-	err = godotenv.Load()
+	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf("err loading: %v", err)
 	}
 
 	config.Load()
+	// ----------------
+
+	// redirect logging to file ----------------
+	log.SetOutput(&lumberjack.Logger{
+		Filename:   "log.log",
+		MaxSize:    5,
+		MaxBackups: config.AppConfig.Logger.MaxLogs,
+		MaxAge:     14,
+		Compress:   false,
+	})
 	// ----------------
 
 	// run bot ----------------

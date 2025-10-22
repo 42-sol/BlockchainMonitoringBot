@@ -293,7 +293,7 @@ func touchOrCreateNode(node TargetNodeDesc) {
 }
 
 func ScheduleHealthCheck(ctx context.Context, botObject *bot.Bot) {
-	ticker := time.NewTicker(time.Duration(config.AppConfig.ScanInterval) * time.Minute)
+	ticker := time.NewTicker(time.Duration(config.AppConfig.Bot.ScanIntervalMinute) * time.Minute)
 	defer ticker.Stop()
 
 	for {

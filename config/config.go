@@ -7,7 +7,16 @@ import (
 )
 
 type Config struct {
-	ScanInterval int `yaml:"scan_interval_minute"`
+	Bot    BotConfig    `yaml:"bot"`
+	Logger LoggerConfig `yaml:"logger"`
+}
+
+type BotConfig struct {
+	ScanIntervalMinute int `yaml:"scan_interval_minute"`
+}
+
+type LoggerConfig struct {
+	MaxLogs int `yaml:"max_logs"`
 }
 
 var AppConfig Config
